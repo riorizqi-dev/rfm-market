@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RFM MARKET — Trading Demo</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: { ink: '#0a0e13', panel: '#10161f', line: '#1c2530', accent: '#10b981', down: '#f43f5e' },
+        fontFamily: {
+          sans: ['Outfit', 'system-ui', 'sans-serif'],
+          mono: ['"JetBrains Mono"', 'monospace'],
+        },
+      },
+    },
+  };
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { background: #0a0e13; }
+  ::selection { background: #10b981; color: #0a0e13; }
+  .num-up { color: #10b981; } .num-down { color: #f43f5e; }
+  .coinrow:hover { background: rgba(255,255,255,.03); }
+  .coinrow.active { background: rgba(16,185,129,.08); border-left: 2px solid #10b981; }
+  .ob-bar { position: relative; }
+  .ob-depth { position: absolute; top: 0; right: 0; bottom: 0; opacity: .12; }
+  input::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .tabbtn.active { color: #fff; border-bottom-color: #10b981; }
+</style>
+</head>
+<body class="font-sans text-zinc-200 antialiased">
+
+<!-- TOP BAR -->
+<header class="border-b border-line bg-ink sticky top-0 z-40">
+  <div class="px-4 h-14 flex items-center justify-between gap-4">
+    <div class="flex items-center gap-3 min-w-0">
+      <a href="index.html" class="flex items-center gap-2 shrink-0">
+        <span class="w-7 h-7 rounded-md bg-accent flex items-center justify-center font-mono font-bold text-ink text-xs">R</span>
+        <span class="font-bold tracking-tight text-white hidden sm:inline">RFM<span class="text-accent">MARKET</span></span>
+      </a>
+      <span class="text-line hidden sm:inline">|</span>
+      <div class="flex items-center gap-2 min-w-0">
+        <img id="pair-icon" src="" alt="" class="w-6 h-6 rounded-full bg-panel shrink-0" />
+        <p class="font-mono font-semibold text-white text-sm truncate" id="pair-name">—/USD</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-4 font-mono text-xs">
+      <div class="hidden md:block"><p class="text-zinc-500">24j %</p><p id="tb-chg" class="text-right">—</p></div>
+      <div class="hidden md:block"><p class="text-zinc-500">24j Tinggi</p><p id="tb-high" class="text-white text-right">—</p></div>
+      <div class="hidden md:block"><p class="text-zinc-500">24j Rendah</p><p id="tb-low" class="text-white text-right">—</p></div>
+      <div class="hidden lg:block"><p class="text-zinc-500">Volume 24j</p><p id="tb-vol" class="text-white text-right">—</p></div>
+      <div class="text-right">
+        <p class="text-zinc-500" id="tb-user">—</p>
+        <p class="text-accent font-semibold" id="tb-equity">—</p>
+      </div>
+      <button id="btn-reset" class="border border-line rounded-md px-2.5 py-1.5 text-zinc-400 hover:border-zinc-500 transition" title="Reset akun demo">Reset</button>
+    </div>
+  </div>
+</header>
+
+<!-- REGISTER GATE -->
+<div id="gate" class="fixed inset-0 z-50 bg-ink/95 flex items-center justify-center px-4 hidden">
+  <div class="w-full max-w-sm border border-line bg-panel rounded-2xl p-8">
+    <div class="w-12 h-12 rounded-xl bg-accent flex items-center justify-center font-mono font-bold text-ink text-xl mb-5">R</div>
+    <h1 class="text-2xl font-bold text-white tracking-tight">RFM Academy</h1>
+    <p class="text-sm text-zinc-400 mt-2 leading-relaxed">Akun demo buat belajar trading. Modal virtual <span class="text-accent font-mono">$100.000</span> — bukan duit beneran, jadi bebas salah.</p>
+    <label class="block text-xs text-zinc-500 mt-6 mb-1.5" for="gate-name">Nama kamu</label>
+    <input id="gate-name" type="text" maxlength="20" placeholder="mis. Fawaz"
+      class="w-full bg-ink border border-line rounded-lg px-3.5 py-2.5 text-white font-mono text-sm outline-none focus:border-accent transition" />
+    <p id="gate-err" class="text-xs text-down mt-2 hidden">Isi nama dulu ya.</p>
+    <button id="gate-btn" class="w-full mt-5 bg-accent text-ink font-semibold py-3 rounded-lg hover:bg-emerald-400 active:scale-[0.98] transition">Mulai Belajar</button>
+    <p class="text-[11px] text-zinc-600 mt-4 text-center">Data tersimpan di browser ini saja.</p>
+  </div>
+</div>
+
+<!-- TERMINAL -->
+<main class="grid grid-cols-12 gap-px bg-line" style="height:calc(100dvh - 3.5rem)">
+
+  <!-- LEFT: COIN LIST -->
+  <aside class="col-span-3 md:col-span-2 bg-ink overflow-y-auto">
+    <p class="px-3 py-2 text-[11px] font-mono text-zinc-500 border-b border-line">PASAR · USD</p>
+    <div id="coin-list" class="font-mono text-xs"></div>
+  </aside>
+
+  <!-- CENTER: CHART + BOTTOM -->
+  <section class="col-span-9 md:col-span-7 bg-ink flex flex-col min-w-0">
+    <div class="flex items-center justify-between px-4 py-2 border-b border-line">
+      <p class="font-mono text-xs text-zinc-500">CANDLESTICK · 7 HARI · REAL</p>
+      <p class="font-mono text-lg font-bold text-white" id="mid-price">—</p>
+    </div>
+    <div class="relative flex-1 min-h-[220px]">
+      <canvas id="candles" class="absolute inset-0 w-full h-full"></canvas>
+    </div>
+
+    <!-- BOTTOM PANEL -->
+    <div class="border-t border-line h-[38%] min-h-[180px] flex flex-col">
+      <div class="flex gap-5 px-4 border-b border-line font-mono text-xs">
+        <button class="tabbtn active py-2.5 border-b-2 border-transparent text-zinc-500" data-tab="portfolio">Portfolio</button>
+        <button class="tabbtn py-2.5 border-b-2 border-transparent text-zinc-500" data-tab="history">Riwayat</button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-4 font-mono text-xs">
+        <div id="tab-portfolio"></div>
+        <div id="tab-history" class="hidden"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RIGHT: ORDER BOOK + FORM -->
+  <aside class="hidden md:flex md:col-span-3 bg-ink flex-col">
+    <p class="px-3 py-2 text-[11px] font-mono text-zinc-500 border-b border-line">ORDER BOOK <span class="text-zinc-700">(simulasi)</span></p>
+    <div class="font-mono text-[11px] px-3 py-1.5 space-y-0.5" id="ob-asks"></div>
+    <p class="px-3 py-1.5 font-mono text-sm font-bold border-y border-line" id="ob-mid">—</p>
+    <div class="font-mono text-[11px] px-3 py-1.5 space-y-0.5" id="ob-bids"></div>
+
+    <!-- ORDER FORM -->
+    <div class="border-t border-line p-3 mt-auto">
+      <div class="flex justify-between font-mono text-[11px] text-zinc-500 mb-2">
+        <span>Saldo: <span class="text-white" id="f-cash">—</span></span>
+        <span>Aset: <span class="text-white" id="f-hold">—</span></span>
+      </div>
+      <div class="grid grid-cols-2 gap-1 mb-2.5 bg-ink border border-line rounded-lg p-1 font-mono text-xs">
+        <button id="side-buy" class="py-1.5 rounded-md bg-accent text-ink font-semibold">BELI</button>
+        <button id="side-sell" class="py-1.5 rounded-md text-zinc-400">JUAL</button>
+      </div>
+      <label class="block text-[11px] text-zinc-500 mb-1" id="f-label">Jumlah (USD)</label>
+      <input id="f-amount" type="number" min="0" step="any" placeholder="0.00"
+        class="w-full bg-ink border border-line rounded-lg px-3 py-2.5 font-mono text-sm text-white outline-none focus:border-accent transition" />
+      <div class="flex gap-1.5 mt-2 font-mono text-[10px]">
+        <button class="pct flex-1 border border-line rounded py-1 text-zinc-400 hover:border-zinc-500" data-p="25">25%</button>
+        <button class="pct flex-1 border border-line rounded py-1 text-zinc-400 hover:border-zinc-500" data-p="50">50%</button>
+        <button class="pct flex-1 border border-line rounded py-1 text-zinc-400 hover:border-zinc-500" data-p="75">75%</button>
+        <button class="pct flex-1 border border-line rounded py-1 text-zinc-400 hover:border-zinc-500" data-p="100">MAX</button>
+      </div>
+      <p class="font-mono text-[11px] text-zinc-500 mt-2.5">Estimasi: <span class="text-zinc-300" id="f-est">—</span></p>
+      <button id="f-submit" class="w-full mt-2 bg-accent text-ink font-semibold py-2.5 rounded-lg hover:bg-emerald-400 active:scale-[0.98] transition text-sm">BELI</button>
+      <p id="f-err" class="text-[11px] text-down mt-1.5 hidden"></p>
+      <p id="f-ok" class="text-[11px] text-accent mt-1.5 hidden"></p>
+    </div>
+  </aside>
+</main>
+
+<script>
+(function () {
+  // ================= ACCOUNT =================
+  const KEY = 'rfm_demo_v1';
+  const START_CASH = 100000;
+  let acc = null;
+
+  const gate = document.getElementById('gate');
+  function loadAcc() {
+    try { acc = JSON.parse(localStorage.getItem(KEY)); } catch (e) { acc = null; }
+    if (!acc || !acc.name) gate.classList.remove('hidden');
+  }
+  function saveAcc() { localStorage.setItem(KEY, JSON.stringify(acc)); }
+
+  document.getElementById('gate-btn').addEventListener('click', () => {
+    const name = document.getElementById('gate-name').value.trim();
+    if (!name) { document.getElementById('gate-err').classList.remove('hidden'); return; }
+    acc = { name: name, cash: START_CASH, holdings: {}, trades: [] };
+    saveAcc();
+    gate.classList.add('hidden');
+    refreshUI();
+  });
+  document.getElementById('gate-name').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('gate-btn').click();
+  });
+
+  document.getElementById('btn-reset').addEventListener('click', () => {
+    if (!confirm('Reset akun demo? Saldo & riwayat hilang.')) return;
+    localStorage.removeItem(KEY);
+    location.reload();
+  });
+
+  // ================= MARKET DATA =================
+  const COINS = ['bitcoin','ethereum','solana','binancecoin','ripple','dogecoin','cardano','tron'];
+  let markets = {};       // id -> data pasar
+  let currentId = 'bitcoin';
+  let side = 'buy';
+
+  const $ = (id) => document.getElementById(id);
+  const fmtUSD = (n) => n == null ? '—' : n >= 1000
+    ? '$' + n.toLocaleString('en-US', { maximumFractionDigits: 2 })
+    : n >= 1 ? '$' + n.toFixed(2) : '$' + n.toFixed(6);
+  const fmtBig = (n) => {
+    if (n == null) return '—';
+    if (n >= 1e12) return '$' + (n/1e12).toFixed(2) + 'T';
+    if (n >= 1e9) return '$' + (n/1e9).toFixed(2) + 'B';
+    if (n >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+    return '$' + n.toLocaleString('en-US');
+  };
+  const fmtQty = (n) => n >= 1000 ? n.toLocaleString('en-US',{maximumFractionDigits:2}) : n.toPrecision(6).replace(/\.?0+$/,'');
+
+  async function loadMarkets() {
+    const url = 'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=' + COINS.join(',') +
+      '&price_change_percentage=24h';
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      data.forEach(c => { markets[c.id] = c; });
+      renderCoinList();
+      renderTopBar();
+      renderOrderBook();
+      refreshUI();
+    } catch (e) { console.warn('markets:', e.message); }
+  }
+
+  function renderCoinList() {
+    $('coin-list').innerHTML = COINS.map(id => {
+      const c = markets[id];
+      if (!c) return '';
+      const up = (c.price_change_percentage_24h || 0) >= 0;
+      return '<button class="coinrow w-full text-left px-3 py-2.5 border-b border-line/50 flex justify-between items-center gap-2' +
+        (id === currentId ? ' active' : '') + '" data-id="' + id + '">' +
+        '<span class="text-white font-semibold">' + c.symbol.toUpperCase() + '</span>' +
+        '<span class="text-right"><span class="block text-zinc-300">' + fmtUSD(c.current_price) + '</span>' +
+        '<span class="block ' + (up ? 'num-up' : 'num-down') + '">' + (up ? '+' : '') + (c.price_change_percentage_24h || 0).toFixed(2) + '%</span></span>' +
+        '</button>';
+    }).join('');
+    document.querySelectorAll('.coinrow').forEach(b => {
+      b.addEventListener('click', () => {
+        currentId = b.dataset.id;
+        renderCoinList();
+        renderTopBar();
+        loadCandles();
+        renderOrderBook();
+        refreshUI();
+      });
+    });
+  }
+
+  function renderTopBar() {
+    const c = markets[currentId];
+    if (!c) return;
+    $('pair-icon').src = c.image;
+    $('pair-name').textContent = c.symbol.toUpperCase() + '/USD';
+    $('mid-price').textContent = fmtUSD(c.current_price);
+    const chg = c.price_change_percentage_24h || 0;
+    const el = $('tb-chg');
+    el.textContent = (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
+    el.className = chg >= 0 ? 'num-up text-right' : 'num-down text-right';
+    $('tb-high').textContent = fmtUSD(c.high_24h);
+    $('tb-low').textContent = fmtUSD(c.low_24h);
+    $('tb-vol').textContent = fmtBig(c.total_volume);
+  }
+
+  // ================= CANDLE CHART =================
+  const canvas = $('candles');
+  const ctx = canvas.getContext('2d');
+  let candles = []; // [time, o, h, l, c]
+
+  async function loadCandles() {
+    try {
+      const res = await fetch('https://api.coingecko.com/api/v3/coins/' + currentId + '/ohlc?vs_currency=usd&days=7');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      candles = await res.json();
+      drawCandles();
+    } catch (e) { console.warn('ohlc:', e.message); }
+  }
+
+  function drawCandles() {
+    if (!candles.length) return;
+    const dpr = window.devicePixelRatio || 1;
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    const padL = 8, padR = 64, padT = 10, padB = 20;
+    const cw = w - padL - padR, ch = h - padT - padB;
+    const n = candles.length;
+    let min = Infinity, max = -Infinity;
+    candles.forEach(c => { min = Math.min(min, c[3]); max = Math.max(max, c[2]); });
+    const y = v => padT + ch - ((v - min) / (max - min || 1)) * ch;
+    const bw = Math.max(2, (cw / n) * 0.6);
+
+    // grid + price labels
+    ctx.strokeStyle = 'rgba(28,37,48,.7)';
+    ctx.fillStyle = '#52525b';
+    ctx.font = '10px JetBrains Mono';
+    ctx.lineWidth = 1;
+    for (let g = 0; g <= 4; g++) {
+      const val = max - ((max - min) / 4) * g;
+      const gy = y(val);
+      ctx.beginPath(); ctx.moveTo(padL, gy); ctx.lineTo(w - padR, gy); ctx.stroke();
+      ctx.fillText(fmtUSD(val), w - padR + 6, gy + 3);
+    }
+
+    candles.forEach((c, i) => {
+      const cx = padL + (i + 0.5) * (cw / n);
+      const up = c[4] >= c[1];
+      const col = up ? '#10b981' : '#f43f5e';
+      ctx.strokeStyle = col;
+      ctx.fillStyle = col;
+      // wick
+      ctx.beginPath(); ctx.moveTo(cx, y(c[2])); ctx.lineTo(cx, y(c[3])); ctx.stroke();
+      // body
+      const top = y(Math.max(c[1], c[4]));
+      const bot = y(Math.min(c[1], c[4]));
+      ctx.fillRect(cx - bw / 2, top, bw, Math.max(1, bot - top));
+    });
+
+    // last price line
+    const last = candles[n - 1][4];
+    const ly = y(last);
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = 'rgba(16,185,129,.5)';
+    ctx.beginPath(); ctx.moveTo(padL, ly); ctx.lineTo(w - padR, ly); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  window.addEventListener('resize', drawCandles);
+
+  // ================= ORDER BOOK (simulasi) =================
+  function renderOrderBook() {
+    const c = markets[currentId];
+    if (!c) return;
+    const mid = c.current_price;
+    const mk = (side) => {
+      let cum = 0;
+      const rows = [];
+      for (let i = 1; i <= 8; i++) {
+        const price = mid * (1 + (side === 'ask' ? i : -i) * 0.0006);
+        const amt = Math.random() * 2 + 0.05;
+        cum += amt;
+        rows.push({ price, amt, cum });
+      }
+      return rows;
+    };
+    const asks = mk('ask').reverse();
+    const bids = mk('bid');
+    const maxCum = Math.max(asks[asks.length - 1].cum, bids[bids.length - 1].cum);
+    const row = (r, col) =>
+      '<div class="ob-bar flex justify-between py-0.5">' +
+      '<div class="ob-depth" style="width:' + ((r.cum / maxCum) * 100).toFixed(1) + '%;background:' + col + '"></div>' +
+      '<span style="color:' + col + '">' + fmtUSD(r.price) + '</span>' +
+      '<span class="text-zinc-400">' + r.amt.toFixed(4) + '</span></div>';
+    $('ob-asks').innerHTML = asks.map(r => row(r, '#f43f5e')).join('');
+    $('ob-bids').innerHTML = bids.map(r => row(r, '#10b981')).join('');
+    const up = (c.price_change_percentage_24h || 0) >= 0;
+    $('ob-mid').textContent = fmtUSD(mid);
+    $('ob-mid').className = 'px-3 py-1.5 font-mono text-sm font-bold border-y border-line ' + (up ? 'num-up' : 'num-down');
+  }
+
+  // ================= TRADING =================
+  function setSide(s) {
+    side = s;
+    $('side-buy').className = 'py-1.5 rounded-md font-semibold ' + (s === 'buy' ? 'bg-accent text-ink' : 'text-zinc-400');
+    $('side-sell').className = 'py-1.5 rounded-md font-semibold ' + (s === 'sell' ? 'bg-down text-ink' : 'text-zinc-400');
+    $('f-label').textContent = s === 'buy' ? 'Jumlah (USD)' : 'Jumlah (' + sym() + ')';
+    const btn = $('f-submit');
+    btn.textContent = s === 'buy' ? 'BELI' : 'JUAL';
+    btn.className = 'w-full mt-2 font-semibold py-2.5 rounded-lg active:scale-[0.98] transition text-sm ' +
+      (s === 'buy' ? 'bg-accent text-ink hover:bg-emerald-400' : 'bg-down text-ink hover:bg-rose-400');
+    updateEst();
+  }
+  $('side-buy').addEventListener('click', () => setSide('buy'));
+  $('side-sell').addEventListener('click', () => setSide('sell'));
+
+  const sym = () => markets[currentId] ? markets[currentId].symbol.toUpperCase() : '';
+
+  $('f-amount').addEventListener('input', updateEst);
+  document.querySelectorAll('.pct').forEach(b => {
+    b.addEventListener('click', () => {
+      if (!acc) return;
+      const p = parseInt(b.dataset.p) / 100;
+      const c = markets[currentId];
+      if (!c) return;
+      if (side === 'buy') $('f-amount').value = (acc.cash * p).toFixed(2);
+      else {
+        const h = acc.holdings[currentId];
+        $('f-amount').value = h ? (h.qty * p).toFixed(6) : '0';
+      }
+      updateEst();
+    });
+  });
+
+  function updateEst() {
+    const c = markets[currentId];
+    if (!c) { $('f-est').textContent = '—'; return; }
+    const amt = parseFloat($('f-amount').value) || 0;
+    $('f-est').textContent = side === 'buy'
+      ? fmtQty(amt / c.current_price) + ' ' + sym()
+      : fmtUSD(amt * c.current_price);
+  }
+
+  function showMsg(ok, msg) {
+    const el = $(ok ? 'f-ok' : 'f-err');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+    setTimeout(() => el.classList.add('hidden'), 3000);
+  }
+
+  $('f-submit').addEventListener('click', () => {
+    if (!acc) { gate.classList.remove('hidden'); return; }
+    const c = markets[currentId];
+    if (!c) return;
+    const amt = parseFloat($('f-amount').value) || 0;
+    if (amt <= 0) { showMsg(false, 'Jumlah harus lebih dari 0.'); return; }
+
+    const h = acc.holdings[currentId] || { qty: 0, cost: 0 };
+
+    if (side === 'buy') {
+      if (amt > acc.cash) { showMsg(false, 'Saldo USD tidak cukup.'); return; }
+      const qty = amt / c.current_price;
+      h.cost += amt;
+      h.qty += qty;
+      acc.cash -= amt;
+      acc.holdings[currentId] = h;
+      acc.trades.unshift({ t: Date.now(), id: currentId, side: 'buy', qty, price: c.current_price, total: amt });
+      showMsg(true, 'Berhasil beli ' + fmtQty(qty) + ' ' + sym());
+    } else {
+      if (!h.qty || amt > h.qty) { showMsg(false, 'Aset ' + sym() + ' tidak cukup.'); return; }
+      const total = amt * c.current_price;
+      const avgCost = h.cost / h.qty;
+      h.cost -= avgCost * amt;
+      h.qty -= amt;
+      if (h.qty < 1e-10) { h.qty = 0; h.cost = 0; }
+      acc.cash += total;
+      acc.holdings[currentId] = h;
+      acc.trades.unshift({ t: Date.now(), id: currentId, side: 'sell', qty: amt, price: c.current_price, total });
+      showMsg(true, 'Berhasil jual ' + fmtQty(amt) + ' ' + sym());
+    }
+    $('f-amount').value = '';
+    saveAcc();
+    refreshUI();
+  });
+
+  // ================= PORTFOLIO / HISTORY =================
+  function equity() {
+    if (!acc) return 0;
+    let eq = acc.cash;
+    Object.keys(acc.holdings).forEach(id => {
+      const h = acc.holdings[id];
+      if (h.qty > 0 && markets[id]) eq += h.qty * markets[id].current_price;
+    });
+    return eq;
+  }
+
+  function refreshUI() {
+    if (!acc) return;
+    $('tb-user').textContent = acc.name;
+    const eq = equity();
+    const pnl = eq - START_CASH;
+    $('tb-equity').textContent = fmtUSD(eq) + ' (' + (pnl >= 0 ? '+' : '') + ((pnl / START_CASH) * 100).toFixed(2) + '%)';
+    $('tb-equity').className = 'font-semibold ' + (pnl >= 0 ? 'text-accent' : 'text-down');
+    $('f-cash').textContent = fmtUSD(acc.cash);
+    const h = acc.holdings[currentId];
+    $('f-hold').textContent = h && h.qty > 0 ? fmtQty(h.qty) + ' ' + sym() : '0 ' + sym();
+
+    // portfolio table
+    const rows = Object.keys(acc.holdings).filter(id => acc.holdings[id].qty > 0);
+    if (!rows.length) {
+      $('tab-portfolio').innerHTML = '<p class="text-zinc-600 py-4 text-center">Belum punya aset. Coba beli dulu di panel kanan.</p>';
+    } else {
+      $('tab-portfolio').innerHTML =
+        '<table class="w-full"><thead><tr class="text-zinc-500 text-left">' +
+        '<th class="pb-2 font-medium">Aset</th><th class="pb-2 font-medium text-right">Jumlah</th>' +
+        '<th class="pb-2 font-medium text-right">Harga Beli Rata2</th><th class="pb-2 font-medium text-right">Harga Now</th>' +
+        '<th class="pb-2 font-medium text-right">Nilai</th><th class="pb-2 font-medium text-right">P/L</th></tr></thead><tbody>' +
+        rows.map(id => {
+          const hd = acc.holdings[id];
+          const c = markets[id];
+          if (!c) return '';
+          const avg = hd.cost / hd.qty;
+          const val = hd.qty * c.current_price;
+          const pl = val - hd.cost;
+          const plp = hd.cost ? (pl / hd.cost) * 100 : 0;
+          return '<tr class="border-t border-line/50">' +
+            '<td class="py-2 text-white font-semibold">' + c.symbol.toUpperCase() + '</td>' +
+            '<td class="py-2 text-right text-zinc-300">' + fmtQty(hd.qty) + '</td>' +
+            '<td class="py-2 text-right text-zinc-400">' + fmtUSD(avg) + '</td>' +
+            '<td class="py-2 text-right text-zinc-300">' + fmtUSD(c.current_price) + '</td>' +
+            '<td class="py-2 text-right text-white">' + fmtUSD(val) + '</td>' +
+            '<td class="py-2 text-right ' + (pl >= 0 ? 'num-up' : 'num-down') + '">' + (pl >= 0 ? '+' : '') + fmtUSD(Math.abs(pl)).slice(0) + ' (' + plp.toFixed(2) + '%)</td>' +
+            '</tr>';
+        }).join('') + '</tbody></table>';
+    }
+
+    // history
+    if (!acc.trades.length) {
+      $('tab-history').innerHTML = '<p class="text-zinc-600 py-4 text-center">Belum ada transaksi.</p>';
+    } else {
+      $('tab-history').innerHTML =
+        '<table class="w-full"><thead><tr class="text-zinc-500 text-left">' +
+        '<th class="pb-2 font-medium">Waktu</th><th class="pb-2 font-medium">Aset</th><th class="pb-2 font-medium">Side</th>' +
+        '<th class="pb-2 font-medium text-right">Jumlah</th><th class="pb-2 font-medium text-right">Harga</th>' +
+        '<th class="pb-2 font-medium text-right">Total</th></tr></thead><tbody>' +
+        acc.trades.slice(0, 50).map(t =>
+          '<tr class="border-t border-line/50">' +
+          '<td class="py-2 text-zinc-400">' + new Date(t.t).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</td>' +
+          '<td class="py-2 text-white">' + t.id.toUpperCase().slice(0, 5) + '</td>' +
+          '<td class="py-2 ' + (t.side === 'buy' ? 'num-up' : 'num-down') + '">' + (t.side === 'buy' ? 'BELI' : 'JUAL') + '</td>' +
+          '<td class="py-2 text-right text-zinc-300">' + fmtQty(t.qty) + '</td>' +
+          '<td class="py-2 text-right text-zinc-300">' + fmtUSD(t.price) + '</td>' +
+          '<td class="py-2 text-right text-white">' + fmtUSD(t.total) + '</td></tr>'
+        ).join('') + '</tbody></table>';
+    }
+    updateEst();
+  }
+
+  document.querySelectorAll('.tabbtn').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.tabbtn').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      $('tab-portfolio').classList.toggle('hidden', b.dataset.tab !== 'portfolio');
+      $('tab-history').classList.toggle('hidden', b.dataset.tab !== 'history');
+    });
+  });
+
+  // ================= BOOT =================
+  loadAcc();
+  loadMarkets();
+  loadCandles();
+  refreshUI();
+  setInterval(loadMarkets, 15000);
+  setInterval(loadCandles, 120000);
+})();
+</script>
+</body>
+</html>

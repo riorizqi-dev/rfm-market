@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RFM MARKET — Harga Koin Hari Ini</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: { ink: '#0a0e13', panel: '#10161f', line: '#1c2530', accent: '#10b981', down: '#f43f5e' },
+        fontFamily: {
+          sans: ['Outfit', 'system-ui', 'sans-serif'],
+          mono: ['"JetBrains Mono"', 'monospace'],
+        },
+      },
+    },
+  };
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { background: #0a0e13; }
+  ::selection { background: #10b981; color: #0a0e13; }
+  .num-up { color: #10b981; } .num-down { color: #f43f5e; }
+  .stat { border-top: 1px solid #1c2530; padding: 14px 0; }
+  .chip { font-size: 11px; padding: 3px 8px; border-radius: 6px; background: rgba(161,161,170,.1); color: #a1a1aa; }
+  .swbtn { white-space: nowrap; padding: 5px 12px; border-radius: 8px; border: 1px solid #1c2530; color: #a1a1aa; transition: all .15s; }
+  .swbtn:hover { border-color: #52525b; }
+  .swbtn.active { border-color: #10b981; color: #10b981; }
+  input::-webkit-inner-spin-button { -webkit-appearance: none; }
+</style>
+</head>
+<body class="font-sans text-zinc-200 antialiased">
+
+<!-- NAV -->
+<header class="border-b border-line bg-ink/85 backdrop-blur-md sticky top-0 z-50">
+  <div class="max-w-[1400px] mx-auto px-5 h-16 flex items-center justify-between">
+    <a href="index.html" class="flex items-center gap-2.5">
+      <span class="w-8 h-8 rounded-md bg-accent flex items-center justify-center font-mono font-bold text-ink text-sm">R</span>
+      <span class="font-bold tracking-tight text-white text-lg">RFM<span class="text-accent">MARKET</span></span>
+    </a>
+    <div class="flex items-center gap-3">
+      <span class="hidden sm:flex items-center gap-1.5 text-xs font-mono text-zinc-500">
+        <span class="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></span> LIVE
+      </span>
+      <a href="index.html#markets" class="border border-line text-zinc-300 text-sm px-4 py-2 rounded-lg hover:border-zinc-500 transition">Semua Pasar</a>
+      <a href="trading.html" class="bg-accent text-ink text-sm font-semibold px-4 py-2 rounded-lg hover:bg-emerald-400 transition">Trading Demo</a>
+    </div>
+  </div>
+</header>
+
+<!-- COIN SWITCHER -->
+<div class="border-b border-line bg-panel">
+  <div class="max-w-[1400px] mx-auto px-5 py-2.5 flex gap-2 overflow-x-auto font-mono text-xs" id="switcher"></div>
+</div>
+
+<main class="max-w-[1400px] mx-auto px-5 py-8">
+
+  <!-- BREADCRUMB + TITLE -->
+  <p class="text-xs text-zinc-500 font-mono mb-4">Kripto &rsaquo; <span id="bc-name" class="text-zinc-300">—</span></p>
+  <div class="flex flex-wrap items-center gap-3 mb-2">
+    <img id="coin-icon" src="" alt="" class="w-10 h-10 rounded-full bg-panel" />
+    <h1 class="text-2xl md:text-3xl font-bold text-white tracking-tight">
+      Harga <span id="coin-name">—</span> <span class="text-zinc-500 text-xl" id="coin-sym"></span>
+    </h1>
+    <span class="chip font-mono" id="coin-rank">Peringkat #—</span>
+    <span class="chip font-mono text-accent" style="background:rgba(16,185,129,.1)">LIVE · CoinGecko</span>
+  </div>
+
+  <!-- PRICE BLOCK -->
+  <div class="flex flex-wrap items-end gap-4 mt-5">
+    <p class="font-mono text-4xl md:text-5xl font-bold text-white" id="price">—</p>
+    <p class="font-mono text-lg font-semibold pb-1" id="chg24">—</p>
+  </div>
+
+  <!-- 24H RANGE BAR -->
+  <div class="mt-6 max-w-md">
+    <div class="flex justify-between font-mono text-xs text-zinc-500 mb-1.5">
+      <span>Rendah: <span class="text-zinc-300" id="low24">—</span></span>
+      <span>Range 24j</span>
+      <span>Tinggi: <span class="text-zinc-300" id="high24">—</span></span>
+    </div>
+    <div class="h-1.5 rounded-full bg-line relative">
+      <div id="range-dot" class="absolute w-3 h-3 rounded-full bg-accent border-2 border-ink -top-[3px]" style="left:50%"></div>
+    </div>
+  </div>
+
+  <div class="grid lg:grid-cols-3 gap-8 mt-10">
+    <!-- LEFT: STATS -->
+    <div class="lg:col-span-1">
+      <div class="border border-line bg-panel rounded-xl p-5">
+        <div class="stat" style="border-top:none;padding-top:0">
+          <p class="text-xs text-zinc-500">Kapitalisasi Pasar</p>
+          <p class="font-mono text-lg text-white mt-1" id="mcap">—</p>
+        </div>
+        <div class="stat">
+          <p class="text-xs text-zinc-500">Valuasi Terdilusi Penuh (FDV)</p>
+          <p class="font-mono text-lg text-white mt-1" id="fdv">—</p>
+        </div>
+        <div class="stat">
+          <p class="text-xs text-zinc-500">Volume Perdagangan 24j</p>
+          <p class="font-mono text-lg text-white mt-1" id="vol">—</p>
+          <p class="font-mono text-xs text-zinc-500 mt-0.5">Vol/Kap Pasar: <span class="text-zinc-300" id="vol-mcap">—</span></p>
+        </div>
+        <div class="stat">
+          <p class="text-xs text-zinc-500">Suplai Beredar</p>
+          <p class="font-mono text-lg text-white mt-1" id="circ">—</p>
+          <div class="h-1.5 rounded-full bg-line mt-2 overflow-hidden">
+            <div id="supply-bar" class="h-full bg-accent rounded-full" style="width:0%"></div>
+          </div>
+        </div>
+        <div class="stat">
+          <p class="text-xs text-zinc-500">Total Suplai</p>
+          <p class="font-mono text-white mt-1" id="total">—</p>
+        </div>
+        <div class="stat" style="padding-bottom:0">
+          <p class="text-xs text-zinc-500">Suplai Maks</p>
+          <p class="font-mono text-white mt-1" id="max">—</p>
+        </div>
+      </div>
+
+      <!-- ATH / ATL -->
+      <div class="border border-line bg-panel rounded-xl p-5 mt-5">
+        <div class="flex justify-between items-center stat" style="border-top:none;padding-top:0">
+          <p class="text-xs text-zinc-500">Tertinggi Sepanjang Masa</p>
+          <div class="text-right">
+            <p class="font-mono text-white" id="ath">—</p>
+            <p class="font-mono text-xs" id="ath-chg">—</p>
+          </div>
+        </div>
+        <div class="flex justify-between items-center stat" style="padding-bottom:0">
+          <p class="text-xs text-zinc-500">Terendah Sepanjang Masa</p>
+          <div class="text-right">
+            <p class="font-mono text-white" id="atl">—</p>
+            <p class="font-mono text-xs" id="atl-chg">—</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONVERTER -->
+      <div class="border border-line bg-panel rounded-xl p-5 mt-5">
+        <p class="text-sm font-semibold text-white mb-4">Konverter <span id="conv-sym"></span> ke USD</p>
+        <div class="flex items-center gap-3">
+          <div class="flex-1 border border-line rounded-lg px-3 py-2.5 flex items-center gap-2 bg-ink">
+            <span class="font-mono text-xs text-zinc-500" id="conv-sym2"></span>
+            <input id="conv-in" type="number" value="1" min="0" step="any"
+              class="w-full bg-transparent font-mono text-white text-sm outline-none" />
+          </div>
+          <span class="text-zinc-500">=</span>
+          <div class="flex-1 border border-line rounded-lg px-3 py-2.5 bg-ink">
+            <p class="font-mono text-sm text-accent" id="conv-out">—</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: CHART + PERFORMANCE -->
+    <div class="lg:col-span-2">
+      <div class="border border-line bg-panel rounded-xl overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-line">
+          <p class="font-semibold text-white text-sm">Grafik <span id="chart-sym"></span> / USD · 7 Hari</p>
+          <p class="font-mono text-xs text-zinc-500" id="chart-updated">—</p>
+        </div>
+        <div class="relative h-72">
+          <canvas id="bigChart" class="absolute inset-0 w-full h-full"></canvas>
+        </div>
+      </div>
+
+      <!-- PERFORMANCE -->
+      <div class="grid grid-cols-3 gap-4 mt-5">
+        <div class="border border-line bg-panel rounded-xl p-4 text-center">
+          <p class="text-xs text-zinc-500 mb-1">1 Jam</p>
+          <p class="font-mono font-semibold" id="p1h">—</p>
+        </div>
+        <div class="border border-line bg-panel rounded-xl p-4 text-center">
+          <p class="text-xs text-zinc-500 mb-1">24 Jam</p>
+          <p class="font-mono font-semibold" id="p24h">—</p>
+        </div>
+        <div class="border border-line bg-panel rounded-xl p-4 text-center">
+          <p class="text-xs text-zinc-500 mb-1">7 Hari</p>
+          <p class="font-mono font-semibold" id="p7d">—</p>
+        </div>
+      </div>
+
+      <!-- ABOUT -->
+      <div class="border border-line bg-panel rounded-xl p-5 mt-5">
+        <p class="font-semibold text-white text-sm mb-3">Tentang <span id="about-name"></span></p>
+        <p class="text-sm text-zinc-400 leading-relaxed" id="about">Memuat deskripsi…</p>
+        <div class="flex flex-wrap gap-2 mt-4" id="links"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- FOOTER -->
+<footer class="border-t border-line mt-10">
+  <div class="max-w-[1400px] mx-auto px-5 py-8 flex flex-col md:flex-row items-center justify-between gap-3 text-sm text-zinc-500">
+    <div class="flex items-center gap-2">
+      <span class="w-6 h-6 rounded bg-accent flex items-center justify-center font-mono font-bold text-ink text-xs">R</span>
+      <span class="font-semibold text-zinc-300">RFM MARKET</span>
+    </div>
+    <p class="font-mono text-xs">Data real-time oleh CoinGecko · Refresh 30 detik</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  const COINS = ['bitcoin', 'ethereum', 'solana', 'binancecoin', 'ripple', 'dogecoin', 'cardano', 'tron'];
+  const params = new URLSearchParams(location.search);
+  let coinId = params.get('id') || 'bitcoin';
+  if (!COINS.includes(coinId)) coinId = 'bitcoin';
+
+  let current = null; // data pasar terakhir
+
+  // ---------- format ----------
+  const fmtUSD = (n) => n == null ? '—' : n >= 1000
+    ? '$' + n.toLocaleString('en-US', { maximumFractionDigits: 2 })
+    : n >= 1 ? '$' + n.toFixed(2) : '$' + n.toFixed(6);
+  const fmtBig = (n) => {
+    if (n == null) return '—';
+    if (n >= 1e12) return '$' + (n / 1e12).toFixed(2) + 'T';
+    if (n >= 1e9)  return '$' + (n / 1e9).toFixed(2) + 'B';
+    if (n >= 1e6)  return '$' + (n / 1e6).toFixed(2) + 'M';
+    return '$' + n.toLocaleString('en-US');
+  };
+  const fmtNum = (n) => n == null ? '—' : n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  const fmtPct = (n) => {
+    if (n == null) return '—';
+    const up = n >= 0;
+    return (up ? '+' : '') + n.toFixed(2) + '%';
+  };
+  const clsPct = (n) => n == null ? 'text-zinc-500' : n >= 0 ? 'num-up' : 'num-down';
+  const fmtDate = (s) => {
+    if (!s) return '';
+    const d = new Date(s);
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const setPct = (id, val, prefix) => {
+    const el = $(id);
+    el.textContent = (prefix || '') + fmtPct(val);
+    el.className = (el.className.match(/font-[a-z]+/g) || []).join(' ') + ' ' + clsPct(val);
+  };
+
+  // ---------- switcher ----------
+  const NAMES = { bitcoin: 'BTC', ethereum: 'ETH', solana: 'SOL', binancecoin: 'BNB', ripple: 'XRP', dogecoin: 'DOGE', cardano: 'ADA', tron: 'TRX' };
+  function renderSwitcher() {
+    $('switcher').innerHTML = COINS.map(id =>
+      '<a href="koin.html?id=' + id + '" class="swbtn' + (id === coinId ? ' active' : '') + '">' + NAMES[id] + '</a>'
+    ).join('');
+  }
+  renderSwitcher();
+
+  // ---------- chart ----------
+  const canvas = $('bigChart');
+  const ctx = canvas.getContext('2d');
+  let series = [];
+  function drawChart() {
+    if (!series.length) return;
+    const dpr = window.devicePixelRatio || 1;
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    const n = series.length;
+    const min = Math.min(...series), max = Math.max(...series);
+    const x = i => (i / (n - 1)) * w;
+    const y = v => h - ((v - min) / (max - min || 1)) * (h - 24) - 12;
+
+    // gridlines
+    ctx.strokeStyle = 'rgba(28,37,48,.7)';
+    ctx.lineWidth = 1;
+    for (let g = 1; g <= 4; g++) {
+      const gy = (h / 5) * g;
+      ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(w, gy); ctx.stroke();
+      const val = max - ((max - min) / 5) * g;
+      ctx.fillStyle = '#52525b';
+      ctx.font = '10px JetBrains Mono';
+      ctx.fillText(fmtUSD(val), 6, gy - 4);
+    }
+
+    const up = series[n - 1] >= series[0];
+    const col = up ? '#10b981' : '#f43f5e';
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, up ? 'rgba(16,185,129,0.22)' : 'rgba(244,63,94,0.22)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.beginPath();
+    ctx.moveTo(0, h);
+    series.forEach((v, i) => ctx.lineTo(x(i), y(v)));
+    ctx.lineTo(w, h);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.beginPath();
+    series.forEach((v, i) => i ? ctx.lineTo(x(i), y(v)) : ctx.moveTo(x(i), y(v)));
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+  window.addEventListener('resize', drawChart);
+
+  // ---------- converter ----------
+  $('conv-in').addEventListener('input', () => {
+    if (!current) return;
+    const amt = parseFloat($('conv-in').value) || 0;
+    $('conv-out').textContent = fmtUSD(amt * current.current_price);
+  });
+
+  // ---------- render market data ----------
+  function render(c) {
+    current = c;
+    document.title = 'Harga ' + c.name + ' (' + c.symbol.toUpperCase() + ') — RFM MARKET';
+    $('bc-name').textContent = c.name;
+    $('coin-name').textContent = c.name;
+    $('coin-sym').textContent = c.symbol.toUpperCase();
+    $('coin-rank').textContent = 'Peringkat #' + (c.market_cap_rank || '—');
+    $('coin-icon').src = c.image;
+    $('chart-sym').textContent = c.symbol.toUpperCase();
+    $('conv-sym').textContent = c.symbol.toUpperCase();
+    $('conv-sym2').textContent = c.symbol.toUpperCase();
+    $('about-name').textContent = c.name;
+
+    $('price').textContent = fmtUSD(c.current_price);
+    const chg = c.price_change_percentage_24h_in_currency ?? c.price_change_percentage_24h;
+    const chgEl = $('chg24');
+    chgEl.textContent = (chg >= 0 ? '▲ ' : '▼ ') + Math.abs(chg).toFixed(2) + '% (24j)';
+    chgEl.className = 'font-mono text-lg font-semibold pb-1 ' + (chg >= 0 ? 'num-up' : 'num-down');
+
+    $('low24').textContent = fmtUSD(c.low_24h);
+    $('high24').textContent = fmtUSD(c.high_24h);
+    const pos = c.high_24h > c.low_24h
+      ? ((c.current_price - c.low_24h) / (c.high_24h - c.low_24h)) * 100
+      : 50;
+    $('range-dot').style.left = 'calc(' + Math.min(100, Math.max(0, pos)).toFixed(1) + '% - 6px)';
+
+    $('mcap').textContent = fmtBig(c.market_cap);
+    $('fdv').textContent = fmtBig(c.fully_diluted_valuation);
+    $('vol').textContent = fmtBig(c.total_volume);
+    $('vol-mcap').textContent = c.market_cap ? ((c.total_volume / c.market_cap) * 100).toFixed(2) + '%' : '—';
+
+    $('circ').textContent = fmtNum(c.circulating_supply) + ' ' + c.symbol.toUpperCase();
+    $('total').textContent = c.total_supply ? fmtNum(c.total_supply) + ' ' + c.symbol.toUpperCase() : '∞';
+    $('max').textContent = c.max_supply ? fmtNum(c.max_supply) + ' ' + c.symbol.toUpperCase() : '∞';
+    if (c.max_supply && c.circulating_supply) {
+      $('supply-bar').style.width = Math.min(100, (c.circulating_supply / c.max_supply) * 100).toFixed(1) + '%';
+    } else {
+      $('supply-bar').style.width = '100%';
+    }
+
+    $('ath').textContent = fmtUSD(c.ath);
+    setPct('ath-chg', c.ath_change_percentage);
+    $('atl').textContent = fmtUSD(c.atl);
+    setPct('atl-chg', c.atl_change_percentage);
+
+    setPct('p1h', c.price_change_percentage_1h_in_currency);
+    setPct('p24h', chg);
+    setPct('p7d', c.price_change_percentage_7d_in_currency);
+
+    if (c.sparkline_in_7d && c.sparkline_in_7d.price) {
+      series = c.sparkline_in_7d.price;
+      drawChart();
+    }
+    $('chart-updated').textContent = 'Update: ' + new Date().toLocaleTimeString('id-ID');
+
+    const amt = parseFloat($('conv-in').value) || 0;
+    $('conv-out').textContent = fmtUSD(amt * c.current_price);
+  }
+
+  // ---------- fetch ----------
+  async function loadMarket() {
+    const url = 'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=' + coinId +
+      '&sparkline=true&price_change_percentage=1h%2C24h%2C7d';
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      if (data[0]) render(data[0]);
+    } catch (e) {
+      console.warn('market fetch failed:', e.message);
+      $('price').textContent = 'Gagal memuat';
+    }
+  }
+
+  async function loadAbout() {
+    const url = 'https://api.coingecko.com/api/v3/coins/' + coinId +
+      '?localization=false&tickers=false&market_data=false&community_data=false&developer_data=false&sparkline=false';
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const d = await res.json();
+      const tmp = document.createElement('div');
+      tmp.innerHTML = d.description && d.description.en ? d.description.en : '';
+      let txt = tmp.textContent || tmp.innerText || '';
+      if (txt.length > 600) txt = txt.slice(0, 600).replace(/\s+\S*$/, '') + '…';
+      $('about').textContent = txt || 'Deskripsi tidak tersedia.';
+
+      const links = [];
+      const home = d.links && d.links.homepage && d.links.homepage.find(u => u);
+      if (home) links.push({ label: 'Website', url: home });
+      const exp = d.links && d.links.blockchain_site && d.links.blockchain_site.find(u => u);
+      if (exp) links.push({ label: 'Explorer', url: exp });
+      if (d.links && d.links.twitter_screen_name)
+        links.push({ label: 'Twitter', url: 'https://twitter.com/' + d.links.twitter_screen_name });
+      if (d.links && d.links.subreddit_url)
+        links.push({ label: 'Reddit', url: d.links.subreddit_url });
+      $('links').innerHTML = links.map(l =>
+        '<a href="' + l.url + '" target="_blank" rel="noopener" class="chip hover:text-white transition-colors">' + l.label + ' ↗</a>'
+      ).join('');
+    } catch (e) {
+      $('about').textContent = 'Deskripsi tidak tersedia.';
+    }
+  }
+
+  loadMarket();
+  loadAbout();
+  setInterval(loadMarket, 30000);
+})();
+</script>
+</body>
+</html>
