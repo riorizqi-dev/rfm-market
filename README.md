@@ -1,5 +1,7 @@
 # RFM Market — Global Stocks & Crypto Exchange
 
+**Live:** [https://rfm-market.vercel.app](https://rfm-market.vercel.app)
+
 Dark-themed trading dashboard UI for a fictional global stocks & crypto exchange. Pure HTML + Tailwind CSS (CDN), no framework.
 
 ## Pages
